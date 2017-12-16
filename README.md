@@ -1,15 +1,26 @@
 # node-red-contrib-msg-router
 A Node Red node to route messages between nodes.
 
-This node makes a series of message routing types available in Node-Red, similar to routers in [Akka](http://getakka.net/articles/actors/routers.html).  Note that not all routers types from Akka have been implemented here, because in Node-Red the message router node doesn't get any feedback from the receiver nodes: this means the message router node is not aware of the load of the receiver nodes.
+## Introduction
+This node makes a series of message routing types available in Node-Red, by sending the input messages to zero/one/multiple/all of its output ports: 
 
-In most cases the **wires** in a Node-Red flow will be sufficient for message routing, since they allow N-to-M connectivity (i.e. N outputs can be connected to M inputs).  In case an output port is connected to N wires, the wiring will pass the *original* message through the first wire (and *clones* of that message through all the other wires):
+![Intro](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_intro.png)
+
+A series of different *router types* are available, to specify TO WHICH outputs the input message should be routed.
+
+In most cases the **Node-Red wires** will be sufficient to send messages between nodes.  For example when an output port is connected to 4 wires (i.e. to 4 input ports), the *original* input message will be send only through the first wire.  Node-Red will create create a *clone* of the input message for every other wire:
 
 ![Standard wiring](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_wiring.png)
 
-Some use cases are load balancing, demultiplexing, ...
+In some specific cases, this standard wiring behaviour might not be what you need.  Nick pointed out [here](https://groups.google.com/d/msg/node-red/RJ1-EPiMDpk/fAJy3xQpAQAJ) that he has some good reasons not changing this default behaviour.  And in the near future the wiring mechanism in Node-Red will become pluggable, which means that other types of wiring might become available some day...  
 
-Remark: in the near future the wiring will become pluggable in Node-Red.  Perhaps some of this node's functionality will become standard available?
+Some **use cases** for this node:
++ Building a *load balancer* with a Node-Red flow.  Remark: there might be better solutions available to accomplish the same result outside the Node-Red flow (e.g. MQTT, ...).
++ Sending messages to multiple nodes without cloning them (for performance).
++ *Demultiplexer*
++ ...
+
+Remark: this node functions similar to routers in [Akka](http://getakka.net/articles/actors/routers.html).  Note that not all routers types from Akka have been implemented here, because in Node-Red the message router node doesn't get any feedback from the receiver nodes: this means the message router node is not aware of the load of the receiver nodes.
 
 ## Install
 Run the following npm command in your Node-RED user directory (typically ~/.node-red):
@@ -112,6 +123,8 @@ Each port can be configured to retrieve the original input message, or a clone o
 When an output port is connected to multiple input ports, the standard Node-Red wiring will send the original message to only 1 input.  All the other inputs will get a clone of the message.  That is a very obvious design design, to avoid multiple nodes manipulating the same message (which might result in strange behaviour).  
 
 However in some cases cloning should be avoided, especially when lot's of data is involved.  For example when the messages contain images, unnecessary cloning of messages will result in bad ***performance***.  If the images are being send to N image *manipulation* nodes, cloning will be required.  But when the images are being send to N image *analyzing* nodes (that don't manipulate the message content), it will be much faster to send the original message to those nodes.
+
+*CAUTION: Sending messages (without cloning) to multiple nodes might cause problems!!!
 
 ## Delays
 A delay can be specified (in milliseconds) for every output.  These delays can be used by all router types.  When a message arrives on an output, it will be delayed with the interval specified for that output.
