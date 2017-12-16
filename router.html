@@ -1,0 +1,280 @@
+<script type="text/x-red" data-template-name="msg-router">
+    <div class="form-row">
+        <label for="node-input-routerType"><i class="fa fa-envelope"></i> Type</label>
+        <select id="node-input-routerType">
+            <option value="broadcast">Broadcast</option> 
+            <option value="message">Message based</option>
+            <option value="random">Random</option>
+            <option value="roundrobin">Round Robin (sequential)</option>
+            <option value="weightedroundrobin">Weighted Round Robin</option>
+            <option value="hashing">Consistent hashing</option>
+            <option value="weightedhashing">Weighted consistent hashing</option>
+        </select>
+    </div>
+    <div class="form-row routerType-row" id="topicDependent-div">    
+        <input type="checkbox" id="node-input-topicDependent" style="display: inline-block; width: auto; vertical-align: top;">
+        <label for="node-input-topicDependent" style="width:70%;"> Topic dependent</label>
+    </div>
+    <div class="form-row routerType-row" id="msgKeyField-div">
+        <label for="node-input-typed-msgKeyField"><i class="fa fa-list"></i> Msg field</label>
+        <input id="node-input-typed-msgKeyField" type="text" style="width: 70%">
+        <input id="node-input-msgKeyField" type="hidden">
+    </div>
+    </br>
+    <div class="form-row" style="margin-bottom: 0px;">
+        <label for="node-input-func"><i class="fa fa-list"></i> Outputs</label>
+        <input type="hidden" id="node-input-func">
+    </div>
+    <div class="form-row">
+        <input type="hidden" id="node-input-outputs"/>
+        <div id="node-input-portinfo-container-div" style="border-radius: 5px; height: 280px; padding-bottom: 5px; border: 1px solid #ccc;">                   
+            <table id="node-input-portinfo-table" width="100%">
+                <thead>
+                    <tr>
+                        <th align="center" valign="middle" border="none" style="padding: 15px;">Output</th>
+                        <th align="center" valign="middle" border="none" style="padding: 15px;" class="portinfo-active-cell">Active</th>                
+                        <th align="center" valign="middle" border="none" style="padding: 15px;" class="portinfo-clone-cell">Clone</th>
+                        <th align="center" valign="middle" border="none" style="padding: 15px;" class="portinfo-delay-cell">Delay (msec)</th>
+                        <th align="center" valign="middle" border="none" style="padding: 15px;" class="portinfo-weight-cell">Weight</th>
+                    </tr>
+                </thead>
+                <tfoot>
+                </tfoot>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        <a href="#" class="btn btn-mini" id="node-input-add-portinfo" style="margin-top: 4px;"><i class="fa fa-plus"></i> Add</a>
+        <a href="#" class="btn btn-mini" id="node-input-remove-portinfo" style="margin-top: 4px;"><i class="fa fa-trash"></i> Remove last</a>
+    </div>
+    </br>
+    <div class="form-row">
+        <label for="node-input-delaying"><i class="fa fa-envelope"></i> Delaying</label>
+        <select id="node-input-delaying">
+            <option value="unrelated">Unrelated</option> 
+            <option value="increment_all">Increment all outputs</option>
+            <option value="increment_active">Increment active outputs</option>
+        </select>
+    </div>
+    <div class="form-row">    
+        <input type="checkbox" id="node-input-msgControl" style="display: inline-block; width: auto; vertical-align: top;">
+        <label for="node-input-msgControl" style="width:70%;"> Allow output control using messages</label>
+    </div>
+    </br>
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/javascript">  
+    // Remark: all this Javascript is based on JQuery. See their API (http://api.jquery.com/) for all available functionality.
+    // Add a 'debugger;' statement for easy debugging.
+    RED.nodes.registerType('msg-router',{
+        category: 'function',
+        color: "#E2D96E",
+        defaults: {
+            routerType: {value:"roundrobin"},
+            topicDependent: {value:false},  
+            msgKeyField: {value:"payload", required:true},
+            outputsInfo: {value:[{active:true, clone:false, delay:0, weight:0}]},
+            name: {value:""}, 
+            delaying: {value:"unrelated"},
+            msgControl: {value:false},
+            outputs: {value:1} // Standard field that will be used by Node-Red to draw N output ports in the flow editor
+        },
+        inputs:1,
+        outputs:1,
+        icon: "router.png",
+        label: function() {
+            return this.name || "msg router";
+        },
+        oneditprepare: function() { 
+            function showHideTableElements() {
+                var routerType = $("#node-input-routerType").val();
+                
+                // Hide all rows concerning the routerType detailed settings, and show some of these again below
+                $(".routerType-row").hide();
+                
+                // Hide the 'weight' column, and show it again for the 'weighted' router types below
+                $(".portinfo-weight-cell").hide();
+                
+                // Depending on the router type, some specific element(s) should be showed
+                switch (routerType) {
+                    case "roundrobin":
+                        $("#topicDependent-div").show();
+                        break;
+                    case "weightedroundrobin":
+                        $(".portinfo-weight-cell").show();
+                        $("#topicDependent-div").show();
+                        break;
+                    case "hashing":
+                        $("#msgKeyField-div").show();
+                        break;
+                    case "weightedhashing":
+                        $(".portinfo-weight-cell").show();
+                        $("#msgKeyField-div").show();
+                        break;
+                }                         
+            }
+            
+            // When the initialWindowStartType combobox value changes, only the corresponding field(s) input fields should be displayed
+            $("#node-input-routerType").change(function() {
+                // When the router type changes, probably some elements should be hidden or showed
+                showHideTableElements();
+            });
+            
+            function addTableRow(portinfo, rowNr) {
+                // Create a new table row (that will be appended later on to the table body)
+                var row = $('<tr/>').css("border-top", "1px solid #ccc");
+                
+                // Create all the columns/cells for the table row.  Each of these cells will get a "portinfo-xxx-cell" class, to simplify afterwards showing/hiding
+                // the columns/cell.  In each cell we will put an element (checkbox, textbox, ...) which will get a "portinfo-xxx-element" class, to simplify 
+                // afterwards setting/getting the element value.  Watch out: not all types of element values can be accessed via their 'val' function!
+                
+                // The first column contains the output port number
+                var outputCell = $('<td>',{align:"center", valign:"middle"}).css({"padding-bottom":"10px", "padding-top":"10px"}).appendTo(row);
+                $('<span/>').text(rowNr).appendTo(outputCell);
+                
+                // The second column contains a checkbox that indicates whether the port is active
+                var activeCell = $('<td/>',{align:"center", valign:"middle"}).css({"padding-bottom":"10px", "padding-top":"10px"}).addClass("portinfo-active-cell").appendTo(row);
+                var activeElement = $('<input/>',{type:"checkbox"}).addClass("portinfo-active-element").appendTo(activeCell);   
+                activeElement.prop('checked', portinfo.active);
+
+               // The second column contains a checkbox that indicates whether the message should be cloned
+                var cloneCell = $('<td/>',{align:"center", valign:"middle"}).css({"padding-bottom":"10px", "padding-top":"10px"}).addClass("portinfo-clone-cell").appendTo(row);
+                var cloneElement = $('<input/>',{type:"checkbox"}).addClass("portinfo-clone-element").appendTo(cloneCell);
+                cloneElement.prop('checked', portinfo.clone);                
+                
+                // Then each row in the table contains a delay field
+                var delayCell = $('<td/>',{align:"center", valign:"middle"}).css({"padding-bottom":"10px", "padding-top":"10px"}).addClass("portinfo-delay-cell").appendTo(row);
+                var delayElement = $('<input/>',{type:"number", min:"0"}).addClass("portinfo-delay-element").appendTo(delayCell);
+                delayElement.val(portinfo.delay);
+                 
+                // Then each row in the table contains a weight field
+                var weightCell = $('<td/>',{align:"center", valign:"middle"}).css({"padding-bottom":"10px", "padding-top":"10px"}).addClass("portinfo-weight-cell").appendTo(row);
+                var weightElement = $('<input/>',{type:"number", min:"0"}).addClass("portinfo-weight-element").appendTo(weightCell);
+                weightElement.val(portinfo.weight);
+                
+                $("#node-input-portinfo-table").append(row);
+            }
+            
+            // Add a click handler to the 'add' button, to add a new row - with default values - in the table
+            $("#node-input-add-portinfo").click(function() {
+                var portInfoTableRows = $("#node-input-portinfo-table").find('tbody').find('tr');
+                var newRowNr = portInfoTableRows.length + 1;
+                var newPortinfo ={active:true, clone:false, weight:0, delay:0};
+                addTableRow(newPortinfo, newRowNr);
+
+                // Set the new number of output ports
+                $("#node-input-outputs").val(portInfoTableRows.length + 1);
+                
+                //$("#node-input-portinfo-table-div").scrollTop($("#node-input-portinfo-table-div").get(0).scrollHeight);
+                
+                // When a new row is added, probably some elements (from that row) should be hidden or showed
+                showHideTableElements();
+            });
+            
+            // Add a click handler to the 'remove last' button, to remove the last row from the table.
+            // We don't add a remove button (cross 'X') after each row, to avoid gaps in the port numbering.
+            $("#node-input-remove-portinfo").click(function() {
+                var portInfoTableRows = $("#node-input-portinfo-table").find('tbody').find('tr');
+                portInfoTableRows.last().remove();
+                
+                // Set the new number of output ports
+                $("#node-input-outputs").val(portInfoTableRows.length - 1);
+                
+                //$("#node-input-portinfo-table-div").scrollTop($("#node-input-portinfo-table-div").get(0).scrollHeight);
+            });
+
+            // Show all the values (from the 'outputsInfo' field) as a row in the table
+            for (var i=0;i<this.outputsInfo.length;i++) {
+                var portinfo = this.outputsInfo[i];
+                addTableRow(portinfo, i+1);
+            }
+            
+            // Load the JQuery plugin for a scrollable table body, with fixed table header (https://github.com/lai32290/TableHeadFixer).
+            // See explantation about third party Js libraries in Node-Red on https://groups.google.com/d/msg/node-red/AgLNx0PpuBA/ZBfKYZ9GBAAJ
+            $.getScript('msg_router/js/tableHeadFixer.js').done(function(data, textStatus, jqxhr) {
+                console.log("JQuery plugin loaded");
+               
+                //$("#node-input-portinfo-table").scrollTableBody({rowsToDisplay:5});
+                $("#node-input-portinfo-table").tableHeadFixer();
+            })
+            .fail(function(jqxhr, settings, exception ) {
+                console.log("JQuery plugin loading failed");
+                console.log(exception);
+                console.log(exception.stack);
+            });
+            
+            // Show the msgKeyField value in a typedinput element (dropdown with only 'msg')
+            var keyValue = $("#node-input-msgKeyField").val() || 'payload';
+            $("#node-input-typed-msgKeyField").typedInput({types:['msg']});
+            $("#node-input-typed-msgKeyField").typedInput('type','msg');
+            $("#node-input-typed-msgKeyField").typedInput('value',keyValue);
+        },
+        oneditsave: function() {
+             // Clear the previous values from the node 'outputsInfo' field
+            var node = this;
+            node.outputsInfo = [];
+         
+            var portInfoTableRows = $("#node-input-portinfo-table").find('tbody').find('tr');
+             
+            // For each table row, a new row will be added in the 'outputsInfo' field (and the values will be copied from the table)
+            portInfoTableRows.each(function(i) {
+                var portinfo = $(this);
+                node.outputsInfo.push({
+                    active: portinfo.find(".portinfo-active-element").is(':checked'),
+                    clone:  portinfo.find(".portinfo-clone-element").is(':checked'),
+                    delay:  portinfo.find(".portinfo-delay-element").val(),
+                    weight: portinfo.find(".portinfo-weight-element").val(),
+                 });
+            });
+            
+            // Copy the msgKeyField value from the typedinput element to the msgKeyField element
+            var keyValue = $("#node-input-typed-msgKeyField").typedInput('value');
+            $("#node-input-msgKeyField").val(keyValue);
+        }
+    });
+</script>
+
+<script type="text/x-red" data-help-name="msg-router">
+    <p>A node to route messages between nodes.</p>
+    <p><strong>Router type:</strong><br/>
+    The router type specifies how the messages will be routed from the input to zero or more outputs.
+    <ul>
+        <li><code>Broadcast</code> The input message will be send to all the outputs.</li>
+        <li><code>Message based</code> The input message needs to specify the output number in the <code>msg.output</code> field.</li>
+        <li><code>Random</code> The input message will randomly be send to one of the outputs.</li>
+        <li><code>Round Robin</code> The input message will be send to one output, in a sequential order.  When all outputs have been looped, the next message will be send again to output 1 and so on.  So the routing looks like this <i>msg1 -> out1, msg2 -> out2, ... msgN -> outN, msgM -> out1, ...</i></li>
+        <li><code>Weighted Round Robin</code> The input message will be send to one output, based on the weights of the outputs.  This can be used to handle outputs with different processing capacities. Each output can be assigned a weight, which is an integer value that indicates the processing capacity. Outputs with higher weights receive more messages, compared to outputs with less weights.</li>
+        <li><code>Consistent hashing</code> The input message will be send to one output, based on some (msg field) value. All messages with the same (msg field) value, will be send to the same output.</li>
+        <li><code>Weighted consistent hashing</code> The input message will be send to one output, based on some (msg field) value and the weight of each output. All messages with the same (msg field) value, will be send to the same output.  Outputs with higher weights receive more messages.</li>
+    </ul></p>
+    <p><strong>Topic dependent:</strong><br/>
+    In case of (weighted) Round Robin, this checkbox becomes available. When selected each <code>msg.topic</code> will have it's own sequence. For example the next message for topic A will be send to output 5, while the next message for topic B will be send to output 2.</p>
+    <p><strong>Outputs:</strong><br/>
+    The properties of each output can be specified here.
+    <ul>
+        <li><code>Output</code> The output number (informative).</li>
+        <li><code>Active</code> When selected, the corresponding output will become active.  An active output will be able to receive messages, in contradiction to disabled outputs which will be ignored by the routing algorithm.</li>
+        <li><code>Clone</code> When selected, the input message will be cloned for this output.  When not selected, the original input message will be send to this output (for performance e.g. images).</li>
+        <li><code>Delay</code> When no value is specified, the message will be send immediately to this output.  When a value (in milliseconds) is specified, the message will be send delayed to this output.</li>
+        <li><code>Weight</code> This option is only available when Weighted Round Robin is selected as router type.  The weight is an integer value that indicates the processing capability of this output.</li>
+    </ul></p>
+    <p><strong>Delaying:</strong><br/>
+    When delay values have been specified, it is possible to apply relations between those separate values.
+    <ul>
+        <li><code>Unrelated</code> The delay values are unrelated to each other.  E.g. when all 3 outputs have a delay 100, they will all get a message (delayed with 100 msec) at the same time.</li>
+        <li><code>Increment all outputs</code> The delays are incremented, which means that the delay of an output N is the sum of the delays of <b>all</b> ports with a lower output number.  E.g. when all 3 outputs have a delay 100, the message will be delayed 100 msec for output 1 and 200 msec for output 2 and 300 msec for output 3.  The delay would stay 300 msec even when output 2 becomes inactive.</li>
+        <li><code>Increment active outputs</code> The delays are incremented, which means that the delay of an output N is the sum of the delays of <b>all active</b> ports with a lower output number.  E.g. when all 3 outputs have a delay 100 (but output 2 is inactive), the message will be delayed 100 msec for output 1 and 200 msec for output 3.</li>
+    </ul></p>
+    <p><strong>Allow outputs control via messages:</strong><br/>
+    When this option is activated, the outputs can be controlled using the input messages.  When an input message has a <code>msg.port</code> field, the same message <i>can</i> contain extra fields for configuring that output:
+    <ul>
+        <li><code>msg.active</code> This field can override the <i>'Active'</i> value of this output.</li>
+        <li><code>msg.weigth</code> This field can override the <i>'Weigth'</i> value of this output.</li>
+        <li><code>msg.clone</code> This field can override the <i>'Clone'</i> value of this output.</li>
+    </ul>
+    As soon as the message contains one of these 3 fields, the message is considered as a <i>control message</i>.  Such messages are <b>not</b> routed to the outputs!  Notice that this updated configuration is not reflected in the node's config screen, since that screen contains the default configuration.</p>
+</script>
