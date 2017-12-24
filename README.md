@@ -112,6 +112,8 @@ This can be used to group similar (i.e. with same value for a specified msg fiel
 
 ![Consistent hashing timeline](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_timeline_hash_based.png)
 
+Remark: the router node decides on his own which value will be send to which port.  If you want to specify this by yourself, you don't really need a router.  Use in that case the standard Node-Red **Switch** node!
+
 ### Weighted consistent hashing routing
 Same mechanism as a normal consistent hashing routing, but the weighted consistent hashing router allows each port to have a ***weight***.  A weight is an integer value that defines the processing capacity of that output: outputs with heigher weight will receive more messages (since they should have enough processing capacity), compared to outputs with less weight.
 
