@@ -15,6 +15,10 @@
         <input type="checkbox" id="node-input-topicDependent" style="display: inline-block; width: auto; vertical-align: top;">
         <label for="node-input-topicDependent" style="width:70%;"> Topic dependent</label>
     </div>
+    <div class="form-row routerType-row" id="counterReset-div">    
+        <input type="checkbox" id="node-input-counterReset" style="display: inline-block; width: auto; vertical-align: top;">
+        <label for="node-input-counterReset" style="width:70%;"> Allow counter reset using messages</label>
+    </div>
     <div class="form-row routerType-row" id="msgKeyField-div">
         <label for="node-input-typed-msgKeyField"><i class="fa fa-list"></i> Msg field</label>
         <input id="node-input-typed-msgKeyField" type="text" style="width: 70%">
@@ -76,6 +80,7 @@
         defaults: {
             routerType: {value:"roundrobin"},
             topicDependent: {value:false},  
+            counterReset: {value:false},
             msgKeyField: {value:"payload", required:true},
             outputsInfo: {value:[{active:true, clone:false, delay:0, weight:0}]},
             name: {value:""}, 
@@ -103,10 +108,12 @@
                 switch (routerType) {
                     case "roundrobin":
                         $("#topicDependent-div").show();
+                        $("#counterReset-div").show();
                         break;
                     case "weightedroundrobin":
                         $(".portinfo-weight-cell").show();
                         $("#topicDependent-div").show();
+                        $("#counterReset-div").show();
                         break;
                     case "hashing":
                         $("#msgKeyField-div").show();
@@ -252,7 +259,9 @@
         <li><code>Weighted consistent hashing</code> The input message will be send to one output, based on some (msg field) value and the weight of each output. All messages with the same (msg field) value, will be send to the same output.  Outputs with higher weights receive more messages.</li>
     </ul></p>
     <p><strong>Topic dependent:</strong><br/>
-    In case of (weighted) Round Robin, this checkbox becomes available. When selected each <code>msg.topic</code> will have it's own sequence. For example the next message for topic A will be send to output 5, while the next message for topic B will be send to output 2.</p>
+    In case of (weighted) Round Robin, this checkbox becomes available. When selected, each <code>msg.topic</code> will have it's own sequence. For example the next message for topic A will be send to output 5, while the next message for topic B will be send to output 2.</p>
+    <p><strong>Allow counter reset using messages:</strong><br/>
+    In case of (weighted) Round Robin, this checkbox becomes available. When selected, the corresponding <code>msg.topic</code> counter will be resetted. For example when <code>msg.topic</code> = A and <code>msg.reset</code> = true, then the counter for topic A will be set to 1 again.  As a result, the ***next*** message of topic A will be send to output 1!</p>    
     <p><strong>Outputs:</strong><br/>
     The properties of each output can be specified here.
     <ul>
