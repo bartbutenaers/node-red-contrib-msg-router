@@ -7,8 +7,9 @@ module.exports = function(RED) {
         RED.nodes.createNode(this,config);
         this.routerType        = config.routerType;
         this.topicDependent    = config.topicDependent;
+        this.counterReset      = config.counterReset;
         this.msgKeyField       = config.msgKeyField || 'payload';
-        this.msgOutputField    = config.msgOutputField || 'output';
+        this.msgOutputField    = config.msgOutputField || 'output'; // Config screen doesn't contain a msgOutputField
         this.delaying          = config.delaying;
         this.msgControl        = config.msgControl;
         this.outputsInfo       = config.outputsInfo || [];
@@ -107,16 +108,27 @@ module.exports = function(RED) {
             
             // Caution: the output numbers (specified in the message) will start from 1, not from 0 !
             // So not zero-based ...
-            if (msg.hasOwnProperty('output')) {
-                if (!Number.isInteger(msg.output)) {
-                    return node.error("The msg.output field contains no valid number");
+            if (msg.hasOwnProperty(node.msgOutputField)) {
+                try {
+                    output = RED.util.getMessageProperty(msg, node.msgOutputField);
+                } 
+                catch(err) {
+                    return node.error("The msg.output field can not be read");
                 }
                 
-                output = parseInt(msg.output);
-                
-                if (output <= 0 || output > node.outputsInfo.length) {
-                    return node.error("The msg.output field contains " + msg.output + ", which is not between 1 and " + node.outputsInfo.length);
+                if (isNaN(output)) {
+                    return node.error("The msg.output is not an integer number");
                 }
+                
+                output = parseInt(output);
+                
+                if (output < 1 || output > node.outputsInfo.length) {
+                    return node.error("The msg.output = " + node.output + " , which should be between 1 and " + node.outputsInfo.length);
+                }
+                
+                if (!node.outputsInfo[output - 1].active) {
+                    return node.error("The msg.output = " + node.output + ", which refers to an inactive output");
+                } 
                 
                 // Make sure it is zero based in the remainder of the code
                 output--;
@@ -152,6 +164,18 @@ module.exports = function(RED) {
                         // When weights are changed, it will be necessary to recalculate the weight pool
                         calculateWeights();
 
+                    }
+                    
+                    if (msg.hasOwnProperty('delay')) {
+                        if (!Number.isInteger(msg.delay)) {
+                            return node.error("The msg.delay field should contain a valid integer number");
+                        }
+                        
+                        outputInfo.delay = parseInt(msg.delay);
+                        controlMessage = true;
+                        
+                        // When delays are changed, it will be necessary to recalculate the real delays per output
+                        calculateDelays();
                     }
                     
                     if (msg.hasOwnProperty('clone')) {
@@ -202,28 +226,8 @@ module.exports = function(RED) {
                      
                     break; 
                 case "message":
-                    if (!msg.hasOwnProperty('output')) {
+                    if (!msg.hasOwnProperty(node.msgOutputField)) {
                         return node.error("The input message doesn't have have a msg.output field");
-                    }
-                    
-                    try {
-                        msgKeyValue = RED.util.getMessageProperty(msg, 'output');
-                    } 
-                    catch(err) {
-                        node.error("The msg.output field can not be read");
-                        return;
-                    }
-                    
-                    if (isNaN(msgKeyValue)) {
-                        return node.error("The msg.output is not an integer output number");
-                    }
-                    
-                    if (msgKeyValue < 1 || msgKeyValue > node.outputsInfo.length) {
-                        return node.error("The msg.output = " + node.msgKeyValue + " , which should be between 1 and " + node.outputsInfo.length);
-                    }
-                    
-                    if (!node.outputsInfo[msgKeyValue - 1].active) {
-                        return node.error("The msg.output = " + node.msgKeyValue + ", which refers to an inactive output");
                     }
                                         
                     // Send the message to the specified output
@@ -242,6 +246,13 @@ module.exports = function(RED) {
                 case "roundrobin":
                     var topic = node.topicDependent ? msg.topic : "all_topics";
                     outputIndex = node.lastUsedOutputIndex.get(topic);
+                    
+                    // When we receive a reset message (and reset messages are allowed), the NEXT message will be send to the first output.
+                    // Accomplish this by removing the counter: for the next message a new counter will be created.
+                    if (node.counterReset && msg.hasOwnProperty('reset') && msg.reset) {
+                        node.lastUsedOutputIndex.delete(topic);
+                        return;
+                    }
                     
                     if (outputIndex == undefined) {
                         // Start sending from index 1 
@@ -266,6 +277,13 @@ module.exports = function(RED) {
                 
                     break;
                 case "weightedroundrobin":
+                    // When we receive a reset message (and reset messages are allowed), the NEXT message will be send to the first output.
+                    if (node.counterReset && msg.hasOwnProperty('reset') && msg.reset) {
+                        // We accomplish this by resetting the calculated weights (but not the initial weights that will be remembered)
+                        node.peers.reset();
+                        return;
+                    }              
+                
                     // Get the next active output index from the pool (based on the specified weights). 
                     var weightedOutput = node.peers.get().server;
                     
