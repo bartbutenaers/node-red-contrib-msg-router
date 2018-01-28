@@ -5,6 +5,7 @@
             <option value="broadcast">Broadcast</option> 
             <option value="message">Message based</option>
             <option value="random">Random</option>
+            <option value="weightedrandom">Weighted random</option>
             <option value="roundrobin">Round Robin (sequential)</option>
             <option value="weightedroundrobin">Weighted Round Robin</option>
             <option value="hashing">Consistent hashing</option>
@@ -106,6 +107,9 @@
                 
                 // Depending on the router type, some specific element(s) should be showed
                 switch (routerType) {
+                    case "weightedrandom":
+                        $(".portinfo-weight-cell").show();
+                        break;
                     case "roundrobin":
                         $("#topicDependent-div").show();
                         $("#counterReset-div").show();
@@ -253,11 +257,13 @@
         <li><code>Broadcast</code> The input message will be send to all the outputs.</li>
         <li><code>Message based</code> The input message needs to specify the output number in the <code>msg.output</code> field.</li>
         <li><code>Random</code> The input message will randomly be send to one of the outputs.</li>
+        <li><code>Weighted random</code> The input message will randomly be send to one of the outputs, based on the weights of the outputs.</li>
         <li><code>Round Robin</code> The input message will be send to one output, in a sequential order.  When all outputs have been looped, the next message will be send again to output 1 and so on.  So the routing looks like this <i>msg1 -> out1, msg2 -> out2, ... msgN -> outN, msgM -> out1, ...</i></li>
-        <li><code>Weighted Round Robin</code> The input message will be send to one output, based on the weights of the outputs.  This can be used to handle outputs with different processing capacities. Each output can be assigned a weight, which is an integer value that indicates the processing capacity. Outputs with higher weights receive more messages, compared to outputs with less weights.</li>
+        <li><code>Weighted Round Robin</code> The input message will be send to one output, based on the weights of the outputs.</li>
         <li><code>Consistent hashing</code> The input message will be send to one output, based on some (msg field) value. All messages with the same (msg field) value, will be send to the same output.</li>
-        <li><code>Weighted consistent hashing</code> The input message will be send to one output, based on some (msg field) value and the weight of each output. All messages with the same (msg field) value, will be send to the same output.  Outputs with higher weights receive more messages.</li>
-    </ul></p>
+        <li><code>Weighted consistent hashing</code> The input message will be send to one output, based on some (msg field) value and the weights of the outputs. All messages with the same (msg field) value, will be send to the same output.  Outputs with higher weights receive more messages.</li>
+    </ul>
+    The weights can be used to handle outputs with different processing capacities. Each output can be assigned a weight, which is an integer value that indicates the processing capacity. Outputs with higher weights receive more messages, compared to outputs with less weights.</p>
     <p><strong>Topic dependent:</strong><br/>
     In case of (weighted) Round Robin, this checkbox becomes available. When selected, each <code>msg.topic</code> will have it's own sequence. For example the next message for topic A will be send to output 5, while the next message for topic B will be send to output 2.</p>
     <p><strong>Allow counter reset using messages:</strong><br/>
