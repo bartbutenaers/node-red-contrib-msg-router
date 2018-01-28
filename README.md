@@ -79,6 +79,9 @@ The random router will send the input message to one randomly chosen output.
 
 ![Random timeline](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_timeline_random.png)
 
+### Weighted random routing
+Same mechanism as a normal random routing, but the weighted random router allows each port to have a ***weight***.  A weight is an integer value that defines the processing capacity of that output: outputs with heigher weight will receive more messages (since they should have enough processing capacity), compared to outputs with less weight.
+
 ### Round Robin routing
 The Round Robin router will send the input message to the next output, in a sequential order.  Suppose we have N outputs:
 + The 1-st message will be send to output 1
