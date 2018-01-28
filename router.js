@@ -1,22 +1,25 @@
 module.exports = function(RED) {
     "use strict";
     var WRRPeers = require('weighted-round-robin');
+    var RandomWeight = require('weighted');
     var HashRing = require('hashring');
     
     function MessageRouterNode(config) {
         RED.nodes.createNode(this,config);
-        this.routerType        = config.routerType;
-        this.topicDependent    = config.topicDependent;
-        this.counterReset      = config.counterReset;
-        this.msgKeyField       = config.msgKeyField || 'payload';
-        this.msgOutputField    = config.msgOutputField || 'output'; // Config screen doesn't contain a msgOutputField
-        this.delaying          = config.delaying;
-        this.msgControl        = config.msgControl;
-        this.outputsInfo       = config.outputsInfo || [];
-        this.timerIds          = [];
-        this.lastUsedOutputIndex = new Map();
-        this.peers             = new WRRPeers(); 
-        this.hashRing          = new HashRing();
+        this.routerType           = config.routerType;
+        this.topicDependent       = config.topicDependent;
+        this.counterReset         = config.counterReset;
+        this.msgKeyField          = config.msgKeyField || 'payload';
+        this.msgOutputField       = config.msgOutputField || 'output'; // Config screen doesn't contain a msgOutputField
+        this.delaying             = config.delaying;
+        this.msgControl           = config.msgControl;
+        this.outputsInfo          = config.outputsInfo || [];
+        this.timerIds             = [];
+        this.lastUsedOutputIndex  = new Map();
+        this.peers                = new WRRPeers(); 
+        this.hashRing             = new HashRing();
+        this.activeOutputsIndices = [];
+        this.activeOutputsWeights = [];
     
         var node = this;
         
@@ -87,9 +90,28 @@ module.exports = function(RED) {
             }
         }
         
+        function calculateActiveOutputs() {
+            var outputInfo = null;
+            
+            // Clear the previous values from the arrays
+            node.activeOutputsIndices.length = 0;
+            node.activeOutputsWeights.length = 0;
+            
+            // Create an array of (zero-based) active output indices (i.e. indices of active outputs in node.outputsInfo).
+            for (var i = 0; i < node.outputsInfo.length; i++) {
+                outputInfo = node.outputsInfo[i];
+                
+                if (outputInfo.active) {
+                    node.activeOutputsIndices.push(i);
+                    node.activeOutputsWeights.push(parseInt(outputInfo.weight));
+                }  
+            }
+        }
+        
         calculateDelays();
         calculateWeights();
         calculateHashes();
+        calculateActiveOutputs();
         
         this.on("input", function(msg) {
             var messages = new Array(node.outputsInfo.length);
@@ -99,7 +121,6 @@ module.exports = function(RED) {
             var timerId = null;
             var output = 0;
             var outputIndex = 0;
-            var activeOutputsIndices = [];
             var msgKeyValue;
             
             // -------------------------------------------------------------------------------------
@@ -123,11 +144,11 @@ module.exports = function(RED) {
                 output = parseInt(output);
                 
                 if (output < 1 || output > node.outputsInfo.length) {
-                    return node.error("The msg.output = " + node.output + " , which should be between 1 and " + node.outputsInfo.length);
+                    return node.error("The msg.output = " + output + " , which should be between 1 and " + node.outputsInfo.length);
                 }
                 
                 if (!node.outputsInfo[output - 1].active) {
-                    return node.error("The msg.output = " + node.output + ", which refers to an inactive output");
+                    return node.error("The msg.output = " + output + ", which refers to an inactive output");
                 } 
                 
                 // Make sure it is zero based in the remainder of the code
@@ -147,10 +168,11 @@ module.exports = function(RED) {
                         outputInfo.active = Boolean(msg.active);
                         controlMessage = true;
                         
-                        // When outputs are being (de)activated, it could be necessary to recalculate the delays and weights
+                        // When outputs are being (de)activated, it could be necessary to recalculate the delays and weights ...
                         calculateDelays();
                         calculateWeights();
                         calculateHashes();
+                        calculateActiveOutputs();
                     }
                     
                     if (msg.hasOwnProperty('weigth')) {
@@ -194,18 +216,9 @@ module.exports = function(RED) {
                     }
                 }                  
             }
-            
-            // Create an array of (zero-based) active output indices (i.e. indices of active outputs in node.outputsInfo).
-            for (var i = 0; i < node.outputsInfo.length; i++) {
-                outputInfo = node.outputsInfo[i];
-                
-                if (outputInfo.active) {
-                    activeOutputsIndices.push(i);
-                }  
-            }      
-
+           
             // Quit when all outputs are inactive, because nothing can be routed anyway
-            if (activeOutputsIndices.length === 0) {
+            if (node.activeOutputsIndices.length === 0) {
                 return;
             }
 
@@ -219,8 +232,8 @@ module.exports = function(RED) {
             switch (node.routerType) {
                 case "broadcast":
                     // Send the input message to all active output
-                    for (var i = 0; i < activeOutputsIndices.length; i++) {
-                        outputIndex = activeOutputsIndices[i];
+                    for (var i = 0; i < node.activeOutputsIndices.length; i++) {
+                        outputIndex = node.activeOutputsIndices[i];
                         messages[outputIndex] = msg;
                     }
                      
@@ -236,12 +249,20 @@ module.exports = function(RED) {
                     break;
                 case "random":
                     // Get a random active output
-                    outputIndex = Math.floor(Math.random() * activeOutputsIndices.length);
-                    var randomOutput = activeOutputsIndices[outputIndex];
+                    outputIndex = Math.floor(Math.random() * node.activeOutputsIndices.length);
+                    var randomOutput = node.activeOutputsIndices[outputIndex];
 
                     // Send the message to the random determined output, and don't send anything (= null) on the other outputs.
                     messages[randomOutput] = msg;
                 
+                    break;
+                case "weightedrandom":
+                    // Get a random active output, based on the weights
+                    var randomOutput = RandomWeight.select(node.activeOutputsIndices, node.activeOutputsWeights);
+                    
+                    // Send the message to the random determined output, and don't send anything (= null) on the other outputs.
+                    messages[randomOutput] = msg;
+                    
                     break;
                 case "roundrobin":
                     var topic = node.topicDependent ? msg.topic : "all_topics";
@@ -262,12 +283,12 @@ module.exports = function(RED) {
                         outputIndex++;
                         
                         // When a message has been send to all outputs yet, start again from output 1
-                        if (outputIndex >= activeOutputsIndices.length) {
+                        if (outputIndex >= node.activeOutputsIndices.length) {
                             outputIndex = 0;
                         }                        
                     }
                     
-                    var lastUsedOutput = activeOutputsIndices[outputIndex];
+                    var lastUsedOutput = node.activeOutputsIndices[outputIndex];
                     
                     // Send the output message to the next 'active' output number
                     messages[lastUsedOutput] = msg;
