@@ -79,7 +79,7 @@ The random router will send the input message to one randomly chosen output.
 
 ![Random timeline](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_timeline_random.png)
 
-### Weighted random routing
+### Weighted random routing (since version 0.0.2)
 Same mechanism as a normal random routing, but the weighted random router allows each port to have a ***weight***.  A weight is an integer value that defines the processing capacity of that output: outputs with heigher weight will receive more messages (since they should have enough processing capacity), compared to outputs with less weight.
 
 ### Round Robin routing
@@ -174,7 +174,7 @@ When this option is enabled, the outputs can be configured using input messages.
 + `msg.active` This field can override the *'Active'* value of this output.
 + `msg.weigth` This field can override the *'Weigth'* value of this output.
 + `msg.clone` This field can override the *'Clone'* value of this output.
-+ `msg.delay` This field can override the *'Delay'* value of this output.
++ `msg.delay` This field can override the *'Delay'* value of this output (since version 0.0.2).
     
 ![Output configuration](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_port_configure.png)
 
