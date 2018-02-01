@@ -147,7 +147,7 @@ When an output port is connected to multiple input ports, the standard Node-Red 
 
 However in some cases cloning should be avoided, especially when lot's of data is involved.  For example when the messages contain images, unnecessary cloning of messages will result in bad ***performance***.  If the images are being send to N image *manipulation* nodes, cloning will be required.  But when the images are being send to N image *analyzing* nodes (that don't manipulate the message content), it will be much faster to send the original message to those nodes.
 
-*CAUTION: Sending messages (without cloning) to multiple nodes might cause problems!!!
+*CAUTION*: Sending messages (without cloning) to multiple nodes might cause problems!!!
 
 ## Delays
 A delay can be specified (in milliseconds) for every output.  These delays can be used by all router types.  When a message arrives on an output, it will be delayed with the interval specified for that output.
