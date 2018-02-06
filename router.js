@@ -147,10 +147,6 @@ module.exports = function(RED) {
                     return node.error("The msg.output = " + output + " , which should be between 1 and " + node.outputsInfo.length);
                 }
                 
-                if (!node.outputsInfo[output - 1].active) {
-                    return node.error("The msg.output = " + output + ", which refers to an inactive output");
-                } 
-                
                 // Make sure it is zero based in the remainder of the code
                 output--;
                             
@@ -242,6 +238,10 @@ module.exports = function(RED) {
                     if (!msg.hasOwnProperty(node.msgOutputField)) {
                         return node.error("The input message doesn't have have a msg.output field");
                     }
+                    
+                    if (!node.outputsInfo[output].active) {
+                        return node.error("The msg.output = " + (output+1) + ", which refers to an inactive output");
+                    } 
                                         
                     // Send the message to the specified output
                     messages[output] = msg;
