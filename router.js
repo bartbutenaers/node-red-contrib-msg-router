@@ -320,10 +320,6 @@ module.exports = function(RED) {
                         return node.error("No msg field is specified in config (for hash value)");
                     }
                     
-                    if (!msg.hasOwnProperty(node.msgKeyField)) {
-                        return node.error("The input message doesn't have have a msg." + node.msgKeyField + " field");
-                    }
-                    
                     try {
                         msgKeyValue = RED.util.getMessageProperty(msg, node.msgKeyField);
                     } 
