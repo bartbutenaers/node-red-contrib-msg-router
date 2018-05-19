@@ -10,6 +10,7 @@ module.exports = function(RED) {
         this.topicDependent       = config.topicDependent;
         this.counterReset         = config.counterReset;
         this.msgKeyField          = config.msgKeyField || 'payload';
+        this.undefinedHash        = config.undefinedHash || false;
         this.msgOutputField       = config.msgOutputField || 'output'; // Config screen doesn't contain a msgOutputField
         this.delaying             = config.delaying;
         this.msgControl           = config.msgControl;
@@ -22,6 +23,22 @@ module.exports = function(RED) {
         this.activeOutputsWeights = [];
     
         var node = this;
+        
+        // Test if an object contains the specified property (handles multiple levels like obj.a.b.c).
+        // (See https://www.customd.com/articles/37/checking-javascript-objects-for-existence-of-a-nested-element )
+        function objectHasProperty(obj, prop) {
+            var parts = prop.split('.');
+            for (var i = 0, l = parts.length; i < l; i++) {
+                var part = parts[i];
+                if ((obj !== null) && (typeof(obj) === 'object') && (part in obj)) {
+                    obj = obj[part];
+                }
+                else {
+                    return false;
+                }
+            }
+            return true;
+        }
         
         function calculateDelays() {
             var outputInfo = {};
@@ -318,6 +335,11 @@ module.exports = function(RED) {
                 case "weightedhashing":      
                     if (!node.msgKeyField) {
                         return node.error("No msg field is specified in config (for hash value)");
+                    }
+                                       
+                    // The input message key field is mandatory except when undefined hashes are allowed
+                    if (node.undefinedHash === false && !objectHasProperty(msg, node.msgKeyField)) {
+                        return node.error("The input message doesn't have have a msg." + node.msgKeyField + " field");
                     }
                     
                     try {
