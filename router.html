@@ -25,6 +25,10 @@
         <input id="node-input-typed-msgKeyField" type="text" style="width: 70%">
         <input id="node-input-msgKeyField" type="hidden">
     </div>
+    <div class="form-row routerType-row" id="undefinedHash-div">    
+        <input type="checkbox" id="node-input-undefinedHash" style="display: inline-block; width: auto; vertical-align: top;">
+        <label for="node-input-undefinedHash" style="width:70%;"> Allow messages with an undefined hash</label> 
+    </div>
     </br>
     <div class="form-row" style="margin-bottom: 0px;">
         <label for="node-input-func"><i class="fa fa-list"></i> Outputs</label>
@@ -83,6 +87,7 @@
             topicDependent: {value:false},  
             counterReset: {value:false},
             msgKeyField: {value:"payload", required:true},
+            undefinedHash: {value: false},
             outputsInfo: {value:[{active:true, clone:false, delay:0, weight:0}]},
             name: {value:""}, 
             delaying: {value:"unrelated"},
@@ -121,10 +126,11 @@
                         break;
                     case "hashing":
                         $("#msgKeyField-div").show();
+                        $("#undefinedHash-div").show();
                         break;
                     case "weightedhashing":
                         $(".portinfo-weight-cell").show();
-                        $("#msgKeyField-div").show();
+                        $("#undefinedHash-div").show();
                         break;
                 }                         
             }
@@ -267,7 +273,9 @@
     <p><strong>Topic dependent:</strong><br/>
     In case of (weighted) Round Robin, this checkbox becomes available. When selected, each <code>msg.topic</code> will have it's own sequence. For example the next message for topic A will be send to output 5, while the next message for topic B will be send to output 2.</p>
     <p><strong>Allow counter reset using messages:</strong><br/>
-    In case of (weighted) Round Robin, this checkbox becomes available. When selected, the corresponding <code>msg.topic</code> counter will be resetted. For example when <code>msg.topic</code> = A and <code>msg.reset</code> = true, then the counter for topic A will be set to 1 again.  As a result, the ***next*** message of topic A will be send to output 1!</p>    
+    In case of (weighted) Round Robin, this checkbox becomes available. When selected, the corresponding <code>msg.topic</code> counter will be resetted. For example when <code>msg.topic</code> = A and <code>msg.reset</code> = true, then the counter for topic A will be set to 1 again.  As a result, the ***next*** message of topic A will be send to output 1!</p>  
+    <p><strong>Allow messages with an undefined hash:</strong><br/>
+    In case of (weighted) consistent hashing routing, this checkbox becomes available. When selected, all messages with an 'undefined' hash will be sended to the same output (i.e. messages that don't contain the specified <i>key field</i>).  When deselected, those messages will be ignored.</p>     
     <p><strong>Outputs:</strong><br/>
     The properties of each output can be specified here.
     <ul>
