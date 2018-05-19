@@ -123,6 +123,12 @@ A weighted Round Robin router can be ***reset*** and can be ***topic dependant**
 ### Consistent hashing routing
 The consistent hashing router will send all input messages with the ***same value*** (hashed) to the same output port.  Any field of the input message can be specified to contain the hash key.  And any object can be used as a key, but usually a string or number or unique id (guid) will be used.
 
+The *key field* needs to be specified, which is the field of the input message from which a hash value will be calculated.  For example when all traffic of the same IP address should be forwarded to the same output, the key field could be `msg.ip`.
+
+Starting from version 0.0.4:
++ The key field can also contain *nested* message properties, for example `msg.payload.device.ip`.
++ The router will ignore the input message (and show an error message) when the input message doesn't contain the required key field.  However when the *'Allow messages with an undefined hash'* checkbox is selected, all those messages (with hash value 'undefined') will be forwarded to the same output port.
+
 ![Consistent hashing flow](https://raw.githubusercontent.com/bartbutenaers/node-red-contrib-msg-router/master/images/router_hash_based.png)
 
 ```
