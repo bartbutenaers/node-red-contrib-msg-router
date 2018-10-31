@@ -259,6 +259,8 @@ module.exports = function(RED) {
                     if (!node.outputsInfo[output].active) {
                         return node.error("The msg.output = " + (output+1) + ", which refers to an inactive output");
                     } 
+                    
+                    msg.output = output + 1;
                                         
                     // Send the message to the specified output
                     messages[output] = msg;
@@ -268,6 +270,8 @@ module.exports = function(RED) {
                     // Get a random active output
                     outputIndex = Math.floor(Math.random() * node.activeOutputsIndices.length);
                     var randomOutput = node.activeOutputsIndices[outputIndex];
+                    
+                    msg.output = randomOutput + 1;
 
                     // Send the message to the random determined output, and don't send anything (= null) on the other outputs.
                     messages[randomOutput] = msg;
@@ -276,6 +280,8 @@ module.exports = function(RED) {
                 case "weightedrandom":
                     // Get a random active output, based on the weights
                     var randomOutput = RandomWeight.select(node.activeOutputsIndices, node.activeOutputsWeights);
+                    
+                    msg.output = randomOutput + 1;
                     
                     // Send the message to the random determined output, and don't send anything (= null) on the other outputs.
                     messages[randomOutput] = msg;
@@ -307,6 +313,8 @@ module.exports = function(RED) {
                     
                     var lastUsedOutput = node.activeOutputsIndices[outputIndex];
                     
+                    msg.output = lastUsedOutput + 1;
+                    
                     // Send the output message to the next 'active' output number
                     messages[lastUsedOutput] = msg;
                     
@@ -324,6 +332,8 @@ module.exports = function(RED) {
                 
                     // Get the next active output index from the pool (based on the specified weights). 
                     var weightedOutput = node.peers.get().server;
+                    
+                    msg.output = weightedOutput + 1;
                     
                     // Send the output message only to the weighted output number
                     messages[weightedOutput] = msg;   
@@ -352,7 +362,9 @@ module.exports = function(RED) {
 
                     // Get the output that corresponds to the (hashed) message field value.  Remark: since we had to store our
                     // output numbers as server hostname '127.0.0.<output number>', the first slice needs to be removed.
-                    var hashedOutput = node.hashRing.get(msgKeyValue).slice(8); 
+                    var hashedOutput = parseInt(node.hashRing.get(msgKeyValue).slice(8));
+                    
+                    msg.output = hashedOutput + 1;
                 
                     // Send the output message only to the hashed output number
                     messages[hashedOutput] = msg; 
