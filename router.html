@@ -261,7 +261,7 @@
     The router type specifies how the messages will be routed from the input to zero or more outputs.
     <ul>
         <li><code>Broadcast</code> The input message will be send to all the outputs.</li>
-        <li><code>Message based</code> The input message needs to specify the output number in the <code>msg.output</code> field.</li>
+        <li><code>Message based</code> The input message needs to specify the output number in the <code>msg.output</code> field.  Remark: the output number is 1-based, which means the first output is 1 (instead of 0).</li>
         <li><code>Random</code> The input message will randomly be send to one of the outputs.</li>
         <li><code>Weighted random</code> The input message will randomly be send to one of the outputs, based on the weights of the outputs.</li>
         <li><code>Round Robin</code> The input message will be send to one output, in a sequential order.  When all outputs have been looped, the next message will be send again to output 1 and so on.  So the routing looks like this <i>msg1 -> out1, msg2 -> out2, ... msgN -> outN, msgM -> out1, ...</i></li>
@@ -300,4 +300,5 @@
         <li><code>msg.clone</code> This field can override the <i>'Clone'</i> value of this output.</li>
     </ul>
     As soon as the message contains one of these 3 fields, the message is considered as a <i>control message</i>.  Such messages are <b>not</b> routed to the outputs!  Notice that this updated configuration is not reflected in the node's config screen, since that screen contains the default configuration.</p>
+    <p>The <code>msg.output</code> field in the output message will be filled with the output number, to which the message has been routed.  This field will be added to the message for all router types, except for <i>'broadcast routing'</i>.  Indeed for broadcasting the 'same' message could be send to all outputs (if no cloning is activated).</p>
 </script>
