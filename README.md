@@ -39,6 +39,8 @@ The node can be configured in a few steps, via the node's config screen:
     - `Weight`: When a value is specified, the weight indicates the possibility that a message will be send to that output. The weight option will only be available for the 2 weighted router types. Weights can be used to setup outputs with different processing capacities. Outputs with higher weights receive more messages, compared to outputs with less weights.
 + The specified router type will determine how the input messages are being routed to the N available outputs.
 
+The `msg.output` field in the output message will be filled with the number of the output, to which the message has been routed.  This field will be filled for all router types, except 'broadcast routing'.  Reason is that for broadcasting, the ***same*** message might be send to all outputs (if cloning is disabled).
+
 ## Router types
 The router types specifies HOW the input messages will be routed to the M available outputs.
 
