@@ -2,14 +2,6 @@
     <div class="form-row">
         <label for="node-input-routerType"><i class="fa fa-envelope"></i> Type</label>
         <select id="node-input-routerType">
-            <option value="broadcast">Broadcast</option> 
-            <option value="message">Message based</option>
-            <option value="random">Random</option>
-            <option value="weightedrandom">Weighted random</option>
-            <option value="roundrobin">Round Robin (sequential)</option>
-            <option value="weightedroundrobin">Weighted Round Robin</option>
-            <option value="hashing">Consistent hashing</option>
-            <option value="weightedhashing">Weighted consistent hashing</option>
         </select>
     </div>
     <div class="form-row routerType-row" id="topicDependent-div">    
@@ -76,7 +68,18 @@
     </div>
 </script>
 
-<script type="text/javascript">  
+<script type="text/javascript">
+    var routerTypes = [
+        {v:"broadcast"          , t:"Broadcast"},
+        {v:"message"            , t:"Message based"},
+        {v:"random"             , t:"Random"},
+        {v:"weightedrandom"     , t:"Weighted random"},
+        {v:"roundrobin"         , t:"Round Robin (sequential)"},
+        {v:"weightedroundrobin" , t:"Weighted Round Robin"},
+        {v:"hashing"            , t:"Consistent hashing"},
+        {v:"weightedhashing"    , t:"Weighted consistent hashing"},
+    ];
+    
     // Remark: all this Javascript is based on JQuery. See their API (http://api.jquery.com/) for all available functionality.
     // Add a 'debugger;' statement for easy debugging.
     RED.nodes.registerType('msg-router',{
@@ -98,7 +101,17 @@
         outputs:1,
         icon: "router.png",
         label: function() {
-            return this.name || "msg router";
+            var routerText = "";
+         debugger;
+            // Get the router type text, based on the router type value
+            for (var i = 0; i < routerTypes.length; i++) {
+               if (routerTypes[i].v === this.routerType) {
+                   routerText = routerTypes[i].t;
+                   break;
+               }
+            }
+
+            return this.name || routerText || "msg router";
         },
         oneditprepare: function() { 
             function showHideTableElements() {
@@ -135,6 +148,15 @@
                         break;
                 }                         
             }
+            
+            for (var i = 0; i < routerTypes.length; i++) {
+                var value = routerTypes[i].v;
+                var text = routerTypes[i].t;
+                $('#node-input-routerType').append($("<option></option>").attr("value", value).text(text));
+            }
+         
+            // Make sure the selected value is also selected in the <select> tag
+            $('#node-input-routerType').val(this.routerType);
             
             // When the initialWindowStartType combobox value changes, only the corresponding field(s) input fields should be displayed
             $("#node-input-routerType").change(function() {
