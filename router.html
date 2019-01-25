@@ -316,7 +316,7 @@
         <li><code>Increment active outputs</code> The delays are incremented, which means that the delay of an output N is the sum of the delays of <b>all active</b> ports with a lower output number.  E.g. when all 3 outputs have a delay 100 (but output 2 is inactive), the message will be delayed 100 msec for output 1 and 200 msec for output 3.</li>
     </ul></p>
     <p><strong>Allow outputs control via messages:</strong><br/>
-    When this option is activated, the outputs can be controlled using the input messages.  When an input message has a <code>msg.port</code> field, the same message <i>can</i> contain extra fields for configuring that output:
+    When this option is activated, the outputs can be controlled using the input messages.  When an input message has a <code>msg.output</code> field, the same message <i>can</i> contain extra fields for configuring that output:
     <ul>
         <li><code>msg.active</code> This field can override the <i>'Active'</i> value of this output.</li>
         <li><code>msg.weigth</code> This field can override the <i>'Weigth'</i> value of this output.</li>
