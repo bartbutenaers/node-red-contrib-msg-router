@@ -188,12 +188,12 @@ module.exports = function(RED) {
                         calculateActiveOutputs();
                     }
                     
-                    if (msg.hasOwnProperty('weigth')) {
-                        if (!Number.isInteger(msg.weigth)) {
-                            return node.error("The msg.weigth field should contain a valid integer number");
+                    if (msg.hasOwnProperty('weight')) {
+                        if (!Number.isInteger(msg.weight)) {
+                            return node.error("The msg.weight field should contain a valid integer number");
                         }
                         
-                        outputInfo.weigth = parseInt(msg.weigth);
+                        outputInfo.weight = parseInt(msg.weight);
                         controlMessage = true;
                         
                         // When weights are changed, it will be necessary to recalculate the weight pool
@@ -223,7 +223,7 @@ module.exports = function(RED) {
                     }
                     
                     if (controlMessage) {
-                        // When we discovered msg.output together with at least one of the remote control fields (msg.active, msg.weigth, msg.clone),
+                        // When we discovered msg.output together with at least one of the remote control fields (msg.active, msg.weight, msg.clone),
                         // then we are dealing with a control message.  Such a message shouldn't be routed to the outputs...
                         return;
                     }
