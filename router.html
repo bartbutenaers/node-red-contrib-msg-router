@@ -319,7 +319,7 @@
     When this option is activated, the outputs can be controlled using the input messages.  When an input message has a <code>msg.output</code> field, the same message <i>can</i> contain extra fields for configuring that output:
     <ul>
         <li><code>msg.active</code> This field can override the <i>'Active'</i> value of this output.</li>
-        <li><code>msg.weigth</code> This field can override the <i>'Weigth'</i> value of this output.</li>
+        <li><code>msg.weight</code> This field can override the <i>'Weight'</i> value of this output.</li>
         <li><code>msg.clone</code> This field can override the <i>'Clone'</i> value of this output.</li>
     </ul>
     As soon as the message contains one of these 3 fields, the message is considered as a <i>control message</i>.  Such messages are <b>not</b> routed to the outputs!  Notice that this updated configuration is not reflected in the node's config screen, since that screen contains the default configuration.</p>
