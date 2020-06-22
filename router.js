@@ -135,7 +135,6 @@ module.exports = function(RED) {
             var delayMap = new Map();
             var delayMessages = null;
             var outputInfo = null;
-            var timerId = null;
             var output = 0;
             var outputIndex = 0;
             var msgKeyValue;
@@ -421,12 +420,13 @@ module.exports = function(RED) {
                 }  
                 else {
                     // When a delay is specified (i.e. non-zero map key), the messages need to be send delayed to the outputs.
-                    timerId = setTimeout( function () {                       
+                    // Fix: use 'let' instead of 'var' to have a scoped variable!
+                    let timerId = setTimeout( function() {                       
                         node.send(item);
                         
                         var index = node.timerIds.indexOf(timerId);
-                        delete node.timerIds[index];
-                        clearInterval(timerId);
+                        node.timerIds.splice(index, 1);
+                        //clearTimeout(timer);
                         
                         // Clear the array
                         item.length = 0;
